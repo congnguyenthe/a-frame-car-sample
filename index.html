@@ -121,7 +121,8 @@
             //plane.object3D.visible = false;
             this.savedPlaneMaterial = plane.object3D.children[0].material;
             plane.object3D.children[0].material = new THREE.ShadowMaterial();
-            
+            plane.object3D.children[0].material.opacity = 0.3;
+
             let session = this.el.sceneEl.renderer.vr.getSession();
             session.requestReferenceSpace('viewer').then((space) => {
                 console.log('got viewer space', space);
