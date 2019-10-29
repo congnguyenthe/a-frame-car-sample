@@ -110,77 +110,77 @@
         console.log('this.el', this.el);
         let plane = document.querySelector('a-plane');  
         this.el.sceneEl.renderer.vr.addEventListener('sessionend', (ev) => {
-            console.log('sessionend', ev);
-            this.viewerSpace = null;
-            //plane.object3D.visible = true;
-            plane.object3D.children[0].material = this.savedPlaneMaterial;
-            this.savedPlaneMaterial = null;
+          console.log('sessionend', ev);
+          this.viewerSpace = null;
+          //plane.object3D.visible = true;
+          plane.object3D.children[0].material = this.savedPlaneMaterial;
+          this.savedPlaneMaterial = null;
         });
         this.el.sceneEl.renderer.vr.addEventListener('sessionstart', (ev) => {
-            console.log('sessionstart', ev);
-            //plane.object3D.visible = false;
-            this.savedPlaneMaterial = plane.object3D.children[0].material;
-            plane.object3D.children[0].material = new THREE.ShadowMaterial();
-            plane.object3D.children[0].material.opacity = 0.3;
+          console.log('sessionstart', ev);
+          //plane.object3D.visible = false;
+          this.savedPlaneMaterial = plane.object3D.children[0].material;
+          plane.object3D.children[0].material = new THREE.ShadowMaterial();
+          plane.object3D.children[0].material.opacity = 0.3;
 
-            let session = this.el.sceneEl.renderer.vr.getSession();
-            session.requestReferenceSpace('viewer').then((space) => {
-                console.log('got viewer space', space);
-                this.viewerSpace = space;
-            });
+          let session = this.el.sceneEl.renderer.vr.getSession();
+          session.requestReferenceSpace('viewer').then((space) => {
+            console.log('got viewer space', space);
+            this.viewerSpace = space;
+          });
         });
       },
       tick: function () {
-          if (!this.viewerSpace) return;
+        if (!this.viewerSpace) return;
 
-          let session = this.el.sceneEl.renderer.vr.getSession();
-          if (!session) return;
-          let inputs = session.inputSources;
+        let session = this.el.sceneEl.renderer.vr.getSession();
+        if (!session) return;
+        let inputs = session.inputSources;
 
-          const car = document.querySelector('[car]').components.car
-          car.rotating = null;
-          car.speeding = null;
-          if (!inputs.length)
-              return;
+        const car = document.querySelector('[car]').components.car
+        car.rotating = null;
+        car.speeding = null;
+        if (!inputs.length)
+          return;
 
-          let source = inputs[0];
-          //console.log('tick source=', source);
-          let frame = this.el.sceneEl.frame;
-          let inputPose = frame.getPose(source.targetRaySpace, this.viewerSpace);
+        let source = inputs[0];
+        //console.log('tick source=', source);
+        let frame = this.el.sceneEl.frame;
+        let inputPose = frame.getPose(source.targetRaySpace, this.viewerSpace);
 
-          // Third column of matrix is the Z axis basis vector. Use it to
-          // transform a (0, 0, -1, 1) vector, note that its w component
-          // isn't necessarily equal to 1.
-          //
-          // Using three.js:
-          //let inputMat = new THREE.Matrix4();
-          //inputMat.fromArray(inputPose.transform.matrix);
-          //let vvec = new THREE.Vector4(0, 0, -1, 1);
-          //vvec.applyMatrix4(inputMat);
-          // Equivalent unrolled version:
-          let vx = -inputPose.transform.matrix[8];
-          let vy = -inputPose.transform.matrix[9];
-          let vz = -inputPose.transform.matrix[10];
-          let vw = 1 - inputPose.transform.matrix[11];
-          let vvec = new THREE.Vector4(vx, vy, vz, vw);
+        // Third column of matrix is the Z axis basis vector. Use it to
+        // transform a (0, 0, -1, 1) vector, note that its w component isn't
+        // necessarily equal to 1.
+        //
+        // Using three.js:
+        //let inputMat = new THREE.Matrix4();
+        //inputMat.fromArray(inputPose.transform.matrix);
+        //let vvec = new THREE.Vector4(0, 0, -1, 1);
+        //vvec.applyMatrix4(inputMat);
+        // Equivalent unrolled version:
+        let vx = -inputPose.transform.matrix[8];
+        let vy = -inputPose.transform.matrix[9];
+        let vz = -inputPose.transform.matrix[10];
+        let vw = 1 - inputPose.transform.matrix[11];
+        let vvec = new THREE.Vector4(vx, vy, vz, vw);
 
-          // Move the cursor to the corresponding screen position.
-          let cursor = document.getElementById('cursor');
-          //cursor.object3D.position.copy(vvec);
-          cursor.setAttribute('position', vvec);
+        // Move the cursor to the corresponding screen position.
+        let cursor = document.getElementById('cursor');
+        //cursor.object3D.position.copy(vvec);
+        cursor.setAttribute('position', vvec);
 
-          let viewerPose = frame.getViewerPose(this.viewerSpace);
-          let proj = new THREE.Matrix4();
-          proj.fromArray(viewerPose.views[0].projectionMatrix);
-          let vproj = vvec.applyMatrix4(proj);
-          vproj.divideScalar(vproj.w);
+        let viewerPose = frame.getViewerPose(this.viewerSpace);
+        let proj = new THREE.Matrix4();
+        proj.fromArray(viewerPose.views[0].projectionMatrix);
+        let vproj = vvec.applyMatrix4(proj);
+        vproj.divideScalar(vproj.w);
 
-          //console.log('tick', vproj.x, vproj.y);
+        //console.log('tick', vproj.x, vproj.y);
 
-          if (vproj.x < -0.1) car.rotating = 'left';
-          if (vproj.x > 0.1) car.rotating = 'right';
-          if (vproj.y < -0.1) car.speeding = 'down';
-          if (vproj.y > 0.1) car.speeding = 'up';
+        if (vproj.x < -0.1) car.rotating = 'left';
+        if (vproj.x > 0.1) car.rotating = 'right';
+        if (vproj.y < -0.1) car.speeding = 'down';
+        if (vproj.y > 0.1) car.speeding = 'up';
       }
     })
 </script>
@@ -255,12 +255,12 @@
                repeat="200 200"
                shadow="receive:true"
                static-body></a-plane>
-        <!-- 
+      <!-- 
            dynamic-body grabbable
            shadowCameraVisible: true;
-
-          <a-sky src="#bg"></a-sky>
-        -->
+           
+           <a-sky src="#bg"></a-sky>
+      -->
     </a-scene>
   </body>
 </html>
