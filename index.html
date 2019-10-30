@@ -104,26 +104,61 @@
       }
     })
 
-    AFRAME.registerComponent('screen-touch', {
+    AFRAME.registerComponent('ar-shadows', {
+      // Swap an object's material to a transparent shadows-only material while
+      // in AR mode. Intended for use with a ground plane.
+      schema: {
+        opacity: {default: 0.3}
+      },
+      init: function () {
+        this.el.sceneEl.addEventListener('enter-vr', (ev) => {
+          console.log('session start', ev);
+          if (this.el.sceneEl.is('ar-mode')) {
+            console.log('AR session start', ev);
+            this.savedMaterial = this.el.object3D.children[0].material;
+            this.el.object3D.children[0].material = new THREE.ShadowMaterial();
+            this.el.object3D.children[0].material.opacity = this.data.opacity;
+          }
+        });
+        this.el.sceneEl.addEventListener('exit-vr', (ev) => {
+          console.log('session end', ev);
+          if (this.savedMaterial) {
+            this.el.object3D.children[0].material = this.savedMaterial;
+            this.savedMaterial = null;
+          }
+        });
+      }
+    })
+
+    AFRAME.registerComponent('car-controller-touch', {
+      init: function () {
+        this.el.addEventListener('axismove', (ev) => {
+          const car = document.querySelector('[car]').components.car;
+          car.onAxisMoveAngle(ev);
+          car.onAxisMoveSpeed(ev);
+        });
+      }
+    })
+
+    AFRAME.registerComponent('screen-controller', {
+      schema: {
+        deadZone: {default: 0}
+      },
       init: function () {
         this.viewerSpace = null;
+        this.deflected = false;
         console.log('this.el', this.el);
-        let plane = document.querySelector('a-plane');  
         this.el.sceneEl.renderer.vr.addEventListener('sessionend', (ev) => {
           console.log('sessionend', ev);
           this.viewerSpace = null;
-          //plane.object3D.visible = true;
-          plane.object3D.children[0].material = this.savedPlaneMaterial;
-          this.savedPlaneMaterial = null;
         });
         this.el.sceneEl.renderer.vr.addEventListener('sessionstart', (ev) => {
           console.log('sessionstart', ev);
-          //plane.object3D.visible = false;
-          this.savedPlaneMaterial = plane.object3D.children[0].material;
-          plane.object3D.children[0].material = new THREE.ShadowMaterial();
-          plane.object3D.children[0].material.opacity = 0.3;
 
           let session = this.el.sceneEl.renderer.vr.getSession();
+
+          // Get a 'viewer' reference space (attached to the phone) for use
+          // with screen space input.
           session.requestReferenceSpace('viewer').then((space) => {
             console.log('got viewer space', space);
             this.viewerSpace = space;
@@ -133,68 +168,85 @@
       tick: function () {
         if (!this.viewerSpace) return;
 
+        let emit = (x, y) => {
+          let detail = {axis: [x, y, 0], changed: [0, 1]};
+          this.deflected = (x != 0 || y != 0);
+          this.el.emit('axismove', detail, false);
+        };
+
         let session = this.el.sceneEl.renderer.vr.getSession();
         if (!session) return;
         let inputs = session.inputSources;
 
-        const car = document.querySelector('[car]').components.car
-        car.rotating = null;
-        car.speeding = null;
-        if (!inputs.length)
-          return;
+        let have_input = false;
+        for (let i = 0; i < inputs.length; ++i) {
+          let source = inputs[i];
+          //console.log('tick source=', source);
+          // Ignore inputs other than screen touch. Other controller types
+          // are handled separately.
+          if (source.targetRayMode != "screen")
+            continue;
 
-        let source = inputs[0];
-        //console.log('tick source=', source);
-        let frame = this.el.sceneEl.frame;
+          let frame = this.el.sceneEl.frame;
 
-        // Get a pose for the touch event in viewer space, this is locked to
-        // the phone and moves with the phone. This way, the input pose
-        // is relative to the virtual camera position. (For world interactions,
-        // we'd want to use local-floor space or similar.)
-        let inputPose = frame.getPose(source.targetRaySpace, this.viewerSpace);
+          // Get a pose for the touch event in viewer space, this is locked to
+          // the phone and moves with the phone. This way, the input pose
+          // is relative to the virtual camera position. (For world interactions,
+          // we'd want to use local-floor space or similar.)
+          let inputPose = frame.getPose(source.targetRaySpace, this.viewerSpace);
 
-        // Third column of the pose matrix is the Z axis basis vector in viewer
-        // space coordinates. Use it to transform a (0, 0, -1, 1) vector, note
-        // that its w component isn't necessarily equal to 1.
-        //
-        // Using three.js:
-        //
-        //let inputMat = new THREE.Matrix4();
-        //inputMat.fromArray(inputPose.transform.matrix);
-        //let vvec = new THREE.Vector4(0, 0, -1, 1);
-        //vvec.applyMatrix4(inputMat);
-        //
-        // Equivalent unrolled version:
-        let vx = -inputPose.transform.matrix[8];
-        let vy = -inputPose.transform.matrix[9];
-        let vz = -inputPose.transform.matrix[10];
-        let vw = 1 - inputPose.transform.matrix[11];
-        let vvec = new THREE.Vector4(vx, vy, vz, vw);
+          // Transform a point on the input space ray into viewer space. This is
+          // the transform matrix multiplied by a (0, 0, -1, 1) vector,
+          // equivalent to subtracting the Z axis basis vector (third column)
+          // from the ray origin in viewer space (fourth column).
+          //
+          // Using three.js:
+          //
+          //let inputMat = new THREE.Matrix4();
+          //inputMat.fromArray(inputPose.transform.matrix);
+          //let vvec = new THREE.Vector4(0, 0, -1, 1);
+          //vvec.applyMatrix4(inputMat);
+          //
+          // Equivalent unrolled version:
+          let m = inputPose.transform.matrix;
+          let vx = m[12] - m[8];
+          let vy = m[13] - m[9];
+          let vz = m[14] - m[10];
+          let vw = 1 - m[11];
+          let vvec = new THREE.Vector4(vx, vy, vz, vw);
 
-        // Move the cursor to the corresponding screen position. This is a
-        // 3D point, but the Z location doesn't matter as long as its
-        // projected location is where we want it to end up onscreen.
-        let cursor = document.getElementById('cursor');
-        //cursor.object3D.position.copy(vvec);
-        cursor.setAttribute('position', vvec);
+          // Move the cursor to the corresponding screen position. This is a
+          // 3D point, but the Z location doesn't matter as long as its
+          // projected location is where we want it to end up onscreen.
+          let cursor = document.getElementById('cursor');
+          //cursor.object3D.position.copy(vvec);
+          cursor.setAttribute('position', vvec);
 
-        // Now apply the screen projection to get a NDC vector
-        // with x/y ranging from -1 to 1 covering the screen,
-        // so the bottom left screen corner is (-1, -1).
-        let viewerPose = frame.getViewerPose(this.viewerSpace);
-        let proj = new THREE.Matrix4();
-        proj.fromArray(viewerPose.views[0].projectionMatrix);
-        let vproj = vvec.applyMatrix4(proj);
-        vproj.divideScalar(vproj.w);
+          // Now apply the screen projection to get a NDC vector
+          // with x/y ranging from -1 to 1 covering the screen,
+          // so the bottom left screen corner is (-1, -1).
+          let viewerPose = frame.getViewerPose(this.viewerSpace);
+          let proj = new THREE.Matrix4();
+          proj.fromArray(viewerPose.views[0].projectionMatrix);
+          let vproj = vvec.applyMatrix4(proj);
+          vproj.divideScalar(vproj.w);
 
-        //console.log('tick', vproj.x, vproj.y);
+          have_input = true;
+          // Apply a dead zone to the controller axes.
+          if (Math.abs(vproj.x) < this.data.deadZone) vproj.x = 0;
+          if (Math.abs(vproj.y) < this.data.deadZone) vproj.y = 0;
+          //console.log('tick', vproj.x, vproj.y);
+          emit(vproj.x, -vproj.y);
+        }
 
-        if (vproj.x < -0.1) car.rotating = 'left';
-        if (vproj.x > 0.1) car.rotating = 'right';
-        if (vproj.y < -0.1) car.speeding = 'down';
-        if (vproj.y > 0.1) car.speeding = 'up';
+        // If we haven't seen any screen input, make sure the virtual joystick
+        // returns to center if needed.
+        if (!have_input && this.deflected) {
+          emit(0, 0);
+        }
       }
     })
+
 </script>
   </head>
   <body>
@@ -216,6 +268,8 @@
                  physics-collider
                  collision-filter = "collidesWith: default, red, green, blue;
                                      collisionForces: false">
+        <a-mixin id="ar-shadows" ar-shadows="opacity: 0.3">
+        <a-mixin id="touch-controller" screen-controller="deadZone: 0.1">
       </a-assets>
       
       <a-entity>
@@ -229,6 +283,7 @@
         </a-camera>
         <a-entity hand-controls="left" mixin="controller" car-controller-left></a-entity>
         <a-entity hand-controls="right" mixin="controller" car-controller-right></a-entity>
+        <a-entity mixin="touch-controller" car-controller-touch></a-entity>
       </a-entity>
 
       <a-entity light="type: ambient; intensity: 0.5;"></a-entity>
@@ -266,6 +321,7 @@
       <a-plane src="#ground" height="200" width="200" rotation="-90 0 0"
                repeat="200 200"
                shadow="receive:true"
+               mixin="ar-shadows"
                static-body></a-plane>
       <!-- 
            dynamic-body grabbable
