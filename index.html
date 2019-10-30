@@ -114,6 +114,21 @@
       }
     })
 
+    AFRAME.registerComponent('ar-set-invisible', {
+      // Set this object's visibility to false while in AR mode.
+      // TODO: could this be replaced with bind="visibility: !ar-mode"?
+      init: function () {
+        this.el.sceneEl.addEventListener('enter-vr', (ev) => {
+          if (this.el.sceneEl.is('ar-mode')) {
+            this.el.setAttribute('visibility', false);
+          }
+        });
+        this.el.sceneEl.addEventListener('exit-vr', (ev) => {
+          this.el.setAttribute('visibility', true);
+        });
+      }
+    })
+
     AFRAME.registerComponent('ar-shadows', {
       // Swap an object's material to a transparent shadows-only material while
       // in AR mode. Intended for use with a ground plane.
@@ -251,12 +266,12 @@
           let vw = 1 - m[11];
           let vvec = new THREE.Vector4(vx, vy, vz, vw);
 
-          // Move the cursor to the corresponding screen position. This is a
-          // 3D point, but the Z location doesn't matter as long as its
-          // projected location is where we want it to end up onscreen.
-          let cursor = document.getElementById('cursor');
-          //cursor.object3D.position.copy(vvec);
-          cursor.setAttribute('position', vvec);
+          // For debugging, move the cursor to the corresponding screen
+          // position. This is a 3D point, but the Z location doesn't matter as
+          // long as its projected location is where we want it to end up
+          // onscreen.
+          //let cursor = document.getElementById('cursor');
+          //cursor.setAttribute('position', vvec);
 
           // Now apply the screen projection to get a NDC vector
           // with x/y ranging from -1 to 1 covering the screen,
@@ -304,9 +319,6 @@
                  physics-collider
                  collision-filter = "collidesWith: default, red, green, blue;
                                      collisionForces: false">
-        <a-mixin id="ar-shadows" ar-shadows="opacity: 0.3">
-        <a-mixin id="touch-controller" screen-controller="deadZone: 0.1">
-        <a-mixin id="xr-controller" xr-two-axis-controller="deadZone: 0.1">
       </a-assets>
       
       <a-entity>
@@ -314,14 +326,15 @@
         >
           <a-entity id="cursor" cursor="rayOrigin: mouse"
             position="0 0 -1"
+            visible="false"
             geometry="primitive: ring; radiusInner: 0.015; radiusOuter: 0.018"
             material="color: #888; shader: flat">
             <a-entity screen-touch></a-entity>
         </a-camera>
         <a-entity hand-controls="left" mixin="controller" car-controller-left></a-entity>
         <a-entity hand-controls="right" mixin="controller" car-controller-right></a-entity>
-        <a-entity mixin="touch-controller" car-controller-two-axis></a-entity>
-        <a-entity mixin="xr-controller" car-controller-two-axis></a-entity>
+        <a-entity screen-controller="deadZone: 0.1" car-controller-two-axis></a-entity>
+        <a-entity xr-two-axis-controller="deadZone: 0.1" car-controller-two-axis></a-entity>
       </a-entity>
 
       <a-entity light="type: ambient; intensity: 0.5;"></a-entity>
@@ -359,13 +372,13 @@
       <a-plane src="#ground" height="200" width="200" rotation="-90 0 0"
                repeat="200 200"
                shadow="receive:true"
+               ar-shadows="opacity: 0.3">
                mixin="ar-shadows"
                static-body></a-plane>
-      <!-- 
-           dynamic-body grabbable
+      <a-sky src="#bg" ar-set-invisible></a-sky>
+
+      <!-- Debugging settings
            shadowCameraVisible: true;
-           
-           <a-sky src="#bg"></a-sky>
       -->
     </a-scene>
   </body>
