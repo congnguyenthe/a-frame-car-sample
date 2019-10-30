@@ -5,7 +5,7 @@
     <script src="dist/aframe-extras.min.js"></script>
     <script src="dist/aframe-physics-system.min.js"></script>
     <script src="dist/super-hands.min.js"></script>
-    <script src="dist/aframe-physics-extras.min.js"></script>
+    <!-- <script src="dist/aframe-physics-extras.min.js"></script> -->
     <script>
     AFRAME.registerComponent('car', {
       init: function () {
@@ -116,7 +116,8 @@
 
     AFRAME.registerComponent('ar-set-invisible', {
       // Set this object's visibility to false while in AR mode.
-      // TODO: could this be replaced with bind="visibility: !ar-mode"?
+      // TODO: could this be replaced with bind="visibility: !ar-mode"
+      // with https://www.npmjs.com/package/aframe-state-component ?
       init: function () {
         this.el.sceneEl.addEventListener('enter-vr', (ev) => {
           if (this.el.sceneEl.is('ar-mode')) {
@@ -301,7 +302,7 @@
 </script>
   </head>
   <body>
-    <a-scene physics>
+    <a-scene physics="debug: false">
       <a-assets>
         <img id="ground" src="images/block.png">
         <img id="bg" src="images/bg.jpg">
@@ -350,12 +351,49 @@
                target="#car"
                position="-5 3 1.5"></a-light>
 
-      <a-box position="-1 0.25 -2"
+      <a-box position="-1 1.25 -2"
              rotation="0 45 0"
-             scale="0.5 0.5 0.5"
+             width="0.5" height="0.5" depth="0.5"
              color="#4CC3D9"
              shadow="cast:true; receive:true"
+             dynamic-body="shape: none"
+             shape__main="shape: box; halfExtents: 0.25 0.25 0.25;"
+             grabbable
              ></a-box>
+
+      <a-box position="0 1.25 -2.5"
+             rotation="0 45 0"
+             width="0.25" height="0.25" depth="0.25"
+             color="#4CC3D9"
+             shadow="cast:true; receive:true"
+             dynamic-body
+             grabbable
+             ></a-box>
+
+      <a-box position="1 1.25 -2.5"
+             rotation="0 45 0"
+             width="0.25" height="0.25" depth="0.25"
+             color="#4CC3D9"
+             shadow="cast:true; receive:true"
+             dynamic-body
+             grabbable
+             ></a-box>
+
+      <a-sphere position="0 1.25 -3"
+                radius="0.125"
+                color="#4CC3D9"
+                shadow="cast:true; receive:true"
+                dynamic-body="angularDamping: 0.4"
+                grabbable
+                ></a-sphere>
+
+      <a-sphere position="1 1.25 -2.5"
+                radius="0.25"
+                color="#4CC3D9"
+                shadow="cast:true; receive:true"
+                dynamic-body="angularDamping: 0.4"
+                grabbable
+                ></a-sphere>
 
       <a-obj-model
         id="car"
@@ -365,6 +403,8 @@
         rotation="0 170 0"
         scale="0.25 0.25 0.25"
         shadow="cast:true; receive:true"
+        static-body="shape: none"
+        shape__main="shape: box; halfExtents: 0.6 0.5 1; offset: 0 0 -0.6"
         car
         animation-mixer
         ></a-obj-model>
@@ -372,8 +412,9 @@
       <a-plane src="#ground" height="200" width="200" rotation="-90 0 0"
                repeat="200 200"
                shadow="receive:true"
-               ar-shadows="opacity: 0.3">
-               static-body></a-plane>
+               ar-shadows="opacity: 0.3"
+               static-body="shape: none"
+               shape__main="shape: box; halfExtents: 100 100 0.125; offset: 0 0 -0.125"></a-plane>
       <a-sky src="#bg" ar-set-invisible></a-sky>
 
       <!-- Debugging settings
