@@ -4,8 +4,8 @@
     <script src="dist/aframe-master.js"></script>
     <script src="dist/aframe-extras.min.js"></script>
     <script src="dist/aframe-physics-system.min.js"></script>
-    <script src="https://unpkg.com/super-hands@3.0.0/dist/super-hands.min.js"></script>
-    <script src="https://unpkg.com/aframe-physics-extras@0.1.2/dist/aframe-physics-extras.min.js"></script>
+    <script src="dist/super-hands.min.js"></script>
+    <script src="dist/aframe-physics-extras.min.js"></script>
     <script>
     AFRAME.registerComponent('car', {
       init: function () {
@@ -146,17 +146,24 @@
         let source = inputs[0];
         //console.log('tick source=', source);
         let frame = this.el.sceneEl.frame;
+
+        // Get a pose for the touch event in viewer space, this is locked to
+        // the phone and moves with the phone. This way, the input pose
+        // is relative to the virtual camera position. (For world interactions,
+        // we'd want to use local-floor space or similar.)
         let inputPose = frame.getPose(source.targetRaySpace, this.viewerSpace);
 
-        // Third column of matrix is the Z axis basis vector. Use it to
-        // transform a (0, 0, -1, 1) vector, note that its w component isn't
-        // necessarily equal to 1.
+        // Third column of the pose matrix is the Z axis basis vector in viewer
+        // space coordinates. Use it to transform a (0, 0, -1, 1) vector, note
+        // that its w component isn't necessarily equal to 1.
         //
         // Using three.js:
+        //
         //let inputMat = new THREE.Matrix4();
         //inputMat.fromArray(inputPose.transform.matrix);
         //let vvec = new THREE.Vector4(0, 0, -1, 1);
         //vvec.applyMatrix4(inputMat);
+        //
         // Equivalent unrolled version:
         let vx = -inputPose.transform.matrix[8];
         let vy = -inputPose.transform.matrix[9];
@@ -164,11 +171,16 @@
         let vw = 1 - inputPose.transform.matrix[11];
         let vvec = new THREE.Vector4(vx, vy, vz, vw);
 
-        // Move the cursor to the corresponding screen position.
+        // Move the cursor to the corresponding screen position. This is a
+        // 3D point, but the Z location doesn't matter as long as its
+        // projected location is where we want it to end up onscreen.
         let cursor = document.getElementById('cursor');
         //cursor.object3D.position.copy(vvec);
         cursor.setAttribute('position', vvec);
 
+        // Now apply the screen projection to get a NDC vector
+        // with x/y ranging from -1 to 1 covering the screen,
+        // so the bottom left screen corner is (-1, -1).
         let viewerPose = frame.getViewerPose(this.viewerSpace);
         let proj = new THREE.Matrix4();
         proj.fromArray(viewerPose.views[0].projectionMatrix);
