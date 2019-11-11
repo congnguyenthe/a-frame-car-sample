@@ -13,77 +13,66 @@
       init: function () {
         window.addEventListener('keydown', this.onKeyDown.bind(this))
         window.addEventListener('keyup', this.onKeyUp.bind(this))
-        this.rotating = null
-        this.speeding = null
+        this.rotating = 0;  // Analog, -1 left, +1 right
+        this.speeding = 0;  // Analog, -1 slower, +1 faster
         this.speed = 0.0
-        this.maxSpeed = 0.04;
-        this.speedIncrement = this.maxSpeed / 10;  
+        this.maxSpeed = 2;  // m/s
+        this.rotationRate = Math.PI / 2;  // radian/s
+        this.speedIncrement = 6  // m/s^2;  
       },
       onAxisMoveSpeed: function(e) {
-        if (e.detail.axis[1] == 0) {
-          this.speeding = null
-        } else if (e.detail.axis[1] > 0) {
-          this.speeding = 'down'
-        } else if (e.detail.axis[1] < 0) {
-          this.speeding = 'up'
-        }
+        // Negate because Gamepad API axis "forward" is -1.
+        this.speeding = -e.detail.axis[1];
       },
       onAxisMoveAngle: function(e) {
-        if (e.detail.axis[0] == 0) {
-          this.rotating = null
-        } else if (e.detail.axis[0] > 0) {
-          this.rotating = 'right'
-        } else if (e.detail.axis[0] < 0) {
-          this.rotating = 'left'
-        }
+        this.rotating = e.detail.axis[0];
       },
       onKeyDown: function (e) {
         if (e.keyCode == 65) {
-          this.rotating = 'left'
+          this.rotating = -1;
         } else if (e.keyCode == 68) {
-          this.rotating = 'right'
+          this.rotating = 1;
         } else if (e.keyCode == 87) {
-          this.speeding = 'up'
+          this.speeding = 1;
         } else if (e.keyCode == 83) {
-          this.speeding = 'down'
+          this.speeding = -1;
         }
       },
       onKeyUp: function (e) {
-        if (e.keyCode == 65 && this.rotating == 'left') {
-          this.rotating = null
-        } else if (e.keyCode == 68 && this.rotating == 'right') {
-          this.rotating = null
-        } else if (e.keyCode == 87 && this.speeding == 'up') {
-          this.speeding = null
-        } else if (e.keyCode == 83 && this.speeding == 'down') {
-          this.speeding = null
+        if (e.keyCode == 65 || e.keyCode == 68) {
+          this.rotating = 0
+        } else if (e.keyCode == 87 || e.keyCode == 83) {
+          this.speeding = 0
         }
       },
-      tick: function () {
-        if (this.speeding != null) {
-          const direction = this.speed > 0 ? 1 : -1
-          if (this.rotating == 'left') {
-            this.el.object3D.rotateY(direction * Math.PI / 120)
-          } else if (this.rotating == 'right') {
-            this.el.object3D.rotateY(direction * -Math.PI / 120)
-          }
+      tick: function (time, timeDelta) {
+        // Cap the time delta to avoid unreasonable jumps after pauses.
+        let deltaSeconds = Math.min(timeDelta / 1000, 1/30);
+        // console.log('deltaSeconds', deltaSeconds, 'from', timeDelta);
+        if (Math.abs(this.speed) > 0.5 && this.rotating != 0) {
+          const direction = this.speed > 0 ? 1 : -1;
+          this.el.object3D.rotateY(-direction * this.rotating * this.rotationRate * deltaSeconds)
         }
-        if (this.speeding == 'up') {
-          this.speed = Math.min(this.speed + this.speedIncrement, this.maxSpeed)
-        } else if (this.speeding == 'down') {
-          this.speed = Math.max(this.speed - this.speedIncrement, -this.maxSpeed)
+        if (this.speeding != 0) {
+          this.speed = this.speed + this.speeding * this.speedIncrement * deltaSeconds;
+          if (this.speeding > 0) {
+            this.speed = Math.min(this.speed, this.maxSpeed);
+          } else {
+            this.speed = Math.max(this.speed, -this.maxSpeed);
+          }
         }
         const position = this.el.getAttribute('position')
         const rotation = this.el.getAttribute('rotation')
         const angle = Math.PI * rotation.y / 180
-        position.x += this.speed * Math.sin(angle)
-        position.z += this.speed * Math.cos(angle)
+        //if (this.speed != 0) console.log(this.speeding, this.speed, angle);
+        position.x += this.speed * Math.sin(angle) * deltaSeconds;
+        position.z += this.speed * Math.cos(angle) * deltaSeconds;
         this.el.setAttribute('position', position)
-        if (this.speed > 0) {
-          this.speed = Math.max(this.speed - this.speedIncrement / 2, 0)
+        if (this.speeding == 0 && this.speed > 0) {
+          this.speed = Math.max(this.speed - this.speedIncrement * deltaSeconds / 2, 0)
         }
-        if (this.speed < 0) {
-          this.speed = Math.min(this.speed + this.speedIncrement / 2, 0)
+        if (this.speeding == 0 && this.speed < 0) {
+          this.speed = Math.min(this.speed + this.speedIncrement * deltaSeconds / 2, 0)
         }
       }
     })
@@ -311,7 +300,7 @@
         <a-asset-item id="car-obj" src="models/car.obj"></a-asset-item>
         <a-asset-item id="car-mtl" src="models/car.mtl"></a-asset-item>
         <a-mixin id="controller"
-                 tracked-controls
+                 tracked-controls="autoHide: false"
                <!--
                  super-hands="colliderEvent: collisions;
                               colliderEventProperty: els;
