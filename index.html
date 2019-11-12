@@ -299,6 +299,7 @@
         };
         this.controlsDiv = document.getElementById('controls');
         this.controlStickDiv = document.getElementById('controlstick');
+        this.enabled = false;
 
         document.body.addEventListener('beforexrselect', ev => {
           console.log(ev.type, ev);
@@ -308,9 +309,11 @@
         this.controlsDiv.addEventListener('pointerdown', ev => {
           //console.log(ev.type, ev.offsetX, ev.offsetY);
           //this.controlStickDiv.style.visibility = '';
+          this.enabled = true;
         });
 
         this.controlsDiv.addEventListener('pointermove', ev => {
+          if (!this.enabled) return;
           let evX = ev.pageX - this.controlsDiv.offsetLeft;
           let evY = ev.pageY - this.controlsDiv.offsetTop;
           //console.log(ev.type, evX, evY, ev);
@@ -324,6 +327,18 @@
         });
 
         this.controlsDiv.addEventListener('pointerup', ev => {
+          this.enabled = false;
+          //console.log(ev.type, ev.offsetX, ev.offsetY);
+          this.controlStickDiv.style.left =
+            (this.controlsDiv.offsetWidth / 2 - this.controlStickDiv.offsetWidth / 2) + 'px';
+          this.controlStickDiv.style.top =
+            (this.controlsDiv.offsetHeight / 2 - this.controlStickDiv.offsetHeight / 2) + 'px';
+          this.emit(0, 0);
+          //this.controlStickDiv.style.visibility = 'hidden';
+        });
+
+        this.controlsDiv.addEventListener('pointerout', ev => {
+          this.enabled = false;
           //console.log(ev.type, ev.offsetX, ev.offsetY);
           this.controlStickDiv.style.left =
             (this.controlsDiv.offsetWidth / 2 - this.controlStickDiv.offsetWidth / 2) + 'px';
