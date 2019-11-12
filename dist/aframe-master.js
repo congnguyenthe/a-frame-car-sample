@@ -76967,7 +76967,7 @@ module.exports.AScene = registerElement('a-scene', {
             }
             navigator.xr.requestSession(useAR ? 'immersive-ar' : 'immersive-vr', {
               requiredFeatures: ['local-floor'],
-              optionalFeatures: ['bounded-floor']
+              optionalFeatures: ['bounded-floor', 'dom-overlay-for-handheld-ar']
             }).then(function requestSuccess (xrSession) {
               self.xrSession = xrSession;
               vrManager.setSession(xrSession);

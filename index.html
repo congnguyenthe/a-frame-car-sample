@@ -290,9 +290,83 @@
       }
     })
 
-</script>
+    AFRAME.registerComponent('screen-joystick', {
+      init: function () {
+        this.emit = (x, y) => {
+          let detail = {axis: [x, y, 0], changed: [0, 1]};
+          //console.log('emit', x, y);
+          this.el.emit('axismove', detail, false);
+        };
+        this.controlsDiv = document.getElementById('controls');
+        this.controlStickDiv = document.getElementById('controlstick');
+
+        document.body.addEventListener('beforexrselect', ev => {
+          console.log(ev.type, ev);
+          ev.preventDefault();
+        });
+
+        this.controlsDiv.addEventListener('pointerdown', ev => {
+          //console.log(ev.type, ev.offsetX, ev.offsetY);
+          //this.controlStickDiv.style.visibility = '';
+        });
+
+        this.controlsDiv.addEventListener('pointermove', ev => {
+          let evX = ev.pageX - this.controlsDiv.offsetLeft;
+          let evY = ev.pageY - this.controlsDiv.offsetTop;
+          //console.log(ev.type, evX, evY, ev);
+          this.controlStickDiv.style.left =
+            (evX - this.controlStickDiv.offsetWidth / 2) + 'px';
+          this.controlStickDiv.style.top =
+            (evY - this.controlStickDiv.offsetHeight / 2) + 'px';
+          this.emit(
+            (evX / this.controlsDiv.offsetWidth) * 2 - 1,
+            (evY / this.controlsDiv.offsetHeight) * 2 - 1);
+        });
+
+        this.controlsDiv.addEventListener('pointerup', ev => {
+          //console.log(ev.type, ev.offsetX, ev.offsetY);
+          this.controlStickDiv.style.left =
+            (this.controlsDiv.offsetWidth / 2 - this.controlStickDiv.offsetWidth / 2) + 'px';
+          this.controlStickDiv.style.top =
+            (this.controlsDiv.offsetHeight / 2 - this.controlStickDiv.offsetHeight / 2) + 'px';
+          this.emit(0, 0);
+          //this.controlStickDiv.style.visibility = 'hidden';
+        });
+      },
+      tick: function () {
+      }
+    })
+    </script>
+    <style>
+      div.a-orientation-modal {
+          display: none;
+      }
+      div#controls {
+          width: 240px;
+          height: 240px;
+          background-color: rgba(255, 255, 255, 0.2);
+          position: absolute;
+          right: 70px;
+          bottom: 70px;
+          z-index: 1;
+          touch-action: none;
+      }
+      div#controlstick {
+          width: 50px;
+          height: 50px;
+          position: relative;
+          left: 100px;
+          top: 100px;
+          border-radius: 50%;
+          background-color: rgba(255, 170, 0, 0.5);
+      }
+    </style>
   </head>
   <body>
+    <div id="controls">
+      <div id="controlstick">
+      </div>
+    </div>
     <a-scene physics="debug: false">
       <a-assets>
         <img id="ground" src="images/block.png">
@@ -330,6 +404,7 @@
         <a-entity hand-controls="left" mixin="controller" car-controller-left></a-entity>
         <a-entity hand-controls="right" mixin="controller" car-controller-right></a-entity>
         <a-entity screen-controller="deadZone: 0.1" car-controller-two-axis></a-entity>
+        <a-entity screen-joystick car-controller-two-axis></a-entity>
         <a-entity xr-two-axis-controller="deadZone: 0.1" car-controller-two-axis></a-entity>
       </a-entity>
 
