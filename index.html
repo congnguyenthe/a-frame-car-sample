@@ -290,6 +290,11 @@
       }
     })
 
+    // This screen joystick uses a DIV with a draggable element.
+    // It works in 2D mode, or in WebXR immersive-ar when using
+    // DOM Overlay. (That currently requires a modified A-Frame
+    // which activates the feature, and enabling "WebXR DOM Overlay"
+    // or "WebXR Incubations" in chrome://flags.)
     AFRAME.registerComponent('screen-joystick', {
       init: function () {
         this.emit = (x, y) => {
