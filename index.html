@@ -105,21 +105,21 @@
       }
     })
 
-    AFRAME.registerComponent('ar-set-invisible', {
-      // Set this object's visibility to false while in AR mode.
-      // TODO: could this be replaced with bind="visibility: !ar-mode"
-      // with https://www.npmjs.com/package/aframe-state-component ?
+    // See also https://github.com/aframevr/aframe/pull/4356
+    AFRAME.registerComponent('hide-in-ar-mode', {
+      // Set this object invisible while in AR mode.
       init: function () {
         this.el.sceneEl.addEventListener('enter-vr', (ev) => {
+          this.wasVisible = this.el.getAttribute('visible');
           if (this.el.sceneEl.is('ar-mode')) {
-            this.el.setAttribute('visibility', false);
+            this.el.setAttribute('visible', false);
           }
         });
         this.el.sceneEl.addEventListener('exit-vr', (ev) => {
-          this.el.setAttribute('visibility', true);
+          if (this.wasVisible) this.el.setAttribute('visible', true);
         });
       }
-    })
+    });
 
     AFRAME.registerComponent('ar-shadows', {
       // Swap an object's material to a transparent shadows-only material while
@@ -506,7 +506,7 @@
                static-body="shape: none"
                shape__main="shape: box; halfExtents: 100 100 0.125; offset: 0 0 -0.125"
       ></a-plane>
-      <a-sky src="#bg" ar-set-invisible></a-sky>
+      <a-sky src="#bg" hide-in-ar-mode></a-sky>
 
       <!-- Debugging settings
            shadowCameraVisible: true;
