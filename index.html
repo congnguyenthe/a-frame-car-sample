@@ -1,6 +1,6 @@
 <html>
   <head>
-    <title>A-Frame Test</title>
+    <title>RC car for VR/AR</title>
     <style>
       body {
           font-family: helvetica, arial, sans-serif;
@@ -16,7 +16,25 @@
           top: 6px;
           padding: 6px;
           max-width: 300px;
-          background-color: rgba(255, 255, 255, 0.7)
+          background-color: rgba(255, 255, 255, 0.7);
+          z-index: 2;
+      }
+      body.ar-mode #text {
+          display: none;
+      }
+      #exitbutton {
+          position: absolute;
+          left: 20px;
+          bottom: 20px;
+          padding: 6px;
+          border: 1px solid rgba(255,255,255,0.5);
+          color: rgba(255,255,255,0.8);
+          background-color: rgba(0,0,0,0.2);
+          display: none;
+          z-index: 2;
+      }
+      body.ar-mode #exitbutton {
+          display: initial;
       }
     </style>
 
@@ -131,11 +149,13 @@
         this.el.sceneEl.addEventListener('enter-vr', (ev) => {
           this.wasVisible = this.el.getAttribute('visible');
           if (this.el.sceneEl.is('ar-mode')) {
-            this.el.setAttribute('visible', false);
+              this.el.setAttribute('visible', false);
+              document.body.classList.add('ar-mode');
           }
         });
         this.el.sceneEl.addEventListener('exit-vr', (ev) => {
           if (this.wasVisible) this.el.setAttribute('visible', true);
+            document.body.classList.remove('ar-mode');
         });
       }
     });
@@ -177,7 +197,7 @@
           this.el.emit('axismove', detail, false);
         };
 
-        let session = this.el.sceneEl.renderer.vr.getSession();
+        let session = this.el.sceneEl.renderer.xr.getSession();
         if (!session) return;
         let inputs = session.inputSources;
 
@@ -210,14 +230,14 @@
         this.viewerSpace = null;
         this.deflected = false;
         console.log('this.el', this.el);
-        this.el.sceneEl.renderer.vr.addEventListener('sessionend', (ev) => {
+        this.el.sceneEl.renderer.xr.addEventListener('sessionend', (ev) => {
           console.log('sessionend', ev);
           this.viewerSpace = null;
         });
-        this.el.sceneEl.renderer.vr.addEventListener('sessionstart', (ev) => {
+        this.el.sceneEl.renderer.xr.addEventListener('sessionstart', (ev) => {
           console.log('sessionstart', ev);
 
-          let session = this.el.sceneEl.renderer.vr.getSession();
+          let session = this.el.sceneEl.renderer.xr.getSession();
 
           // Get a 'viewer' reference space (attached to the phone) for use
           // with screen space input.
@@ -236,7 +256,7 @@
           this.el.emit('axismove', detail, false);
         };
 
-        let session = this.el.sceneEl.renderer.vr.getSession();
+        let session = this.el.sceneEl.renderer.xr.getSession();
         if (!session) return;
         let inputs = session.inputSources;
 
@@ -375,6 +395,17 @@
       tick: function () {
       }
     })
+
+    AFRAME.registerComponent('exit-ar-button', {
+      init: function () {
+        console.log('exit-ar-button init');
+        document.getElementById('exitbutton').addEventListener('click', ev => {
+            console.log('exit-ar-button event ' + ev.type);
+            this.el.sceneEl.renderer.xr.getSession().end();
+        });
+      }
+    })
+
     </script>
     <style>
       div.a-orientation-modal {
@@ -405,6 +436,9 @@
     <div id="controls">
       <div id="controlstick">
       </div>
+    </div>
+    <div id="exitbutton">
+      Exit AR
     </div>
     <a-scene physics="debug: false">
       <a-assets>
@@ -445,6 +479,7 @@
         <a-entity screen-controller="deadZone: 0.1" car-controller-two-axis></a-entity>
         <a-entity screen-joystick car-controller-two-axis></a-entity>
         <a-entity xr-two-axis-controller="deadZone: 0.1" car-controller-two-axis></a-entity>
+        <a-entity exit-ar-button></a-entity>
       </a-entity>
 
       <a-entity light="type: ambient; intensity: 0.5;"></a-entity>
@@ -546,7 +581,6 @@
         To try WebXR's experimental AR mode, use an <a href="https://developers.google.com/ar/discover/supported-devices">ARCore-compatible</a> 
         Android phone with Chrome v79+ and enable <b>WebXR AR Module</b> in chrome://flags.
       </p>
-      
     </div>
   </body>
 </html>
