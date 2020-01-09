@@ -78884,9 +78884,17 @@ module.exports.AScene = registerElement('a-scene', {
             if (this.xrSession) {
               this.xrSession.removeEventListener('end', this.exitVRBound);
             }
+            // HACK: ask for DOM Overlay support, and support both the version
+            // in Chrome 79-current 81 Canary ('dom-overlay-for-handheld-ar',
+            // document.body is the default fullscreen element), and the pending
+            // spec ('dom-overlay', need to specify domOverlay.root attribute).
+            // See https://immersive-web.github.io/dom-overlays/ for details,
+            // and https://github.com/aframevr/aframe/issues/4315 for more official
+            // A-Frame integration.
             navigator.xr.requestSession(useAR ? 'immersive-ar' : 'immersive-vr', {
               requiredFeatures: ['local-floor'],
-              optionalFeatures: ['bounded-floor']
+              optionalFeatures: ['bounded-floor', 'dom-overlay', 'dom-overlay-for-handheld-ar'],
+              domOverlay: {root: document.body}
             }).then(function requestSuccess (xrSession) {
               self.xrSession = xrSession;
               vrManager.setSession(xrSession);
