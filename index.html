@@ -19,9 +19,6 @@
           background-color: rgba(255, 255, 255, 0.7);
           z-index: 2;
       }
-      body.ar-mode #text {
-          display: none;
-      }
       #exitbutton {
           position: absolute;
           left: 20px;
@@ -32,6 +29,10 @@
           background-color: rgba(0,0,0,0.2);
           display: none;
           z-index: 2;
+      }
+      body.ar-mode #text,
+      body.ar-mode canvas.a-canvas {
+          display: none;
       }
       body.ar-mode #exitbutton {
           display: initial;
