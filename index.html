@@ -349,7 +349,12 @@
         this.controlStickDiv = document.getElementById('controlstick');
         this.enabled = false;
 
-        document.body.addEventListener('beforexrselect', ev => {
+        // Don't generate WebXR select events for interactions with the screen
+        // controls to avoid duplicate input. This is a new proposed API, it
+        // has no effect in current Chrome versions, but those don't generate
+        // any XR select events while the DOM overlay is active anyway. See
+        // https://immersive-web.github.io/dom-overlays/#onbeforexrselect
+        this.controlsDiv.addEventListener('beforexrselect', ev => {
           console.log(ev.type, ev);
           ev.preventDefault();
         });
