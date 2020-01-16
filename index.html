@@ -262,6 +262,10 @@
 
         let session = this.el.sceneEl.renderer.xr.getSession();
         if (!session) return;
+
+        // Ignore the XR screen input source if DOM Overlay is in use.
+        if (session.domOverlayState) return;
+
         let inputs = session.inputSources;
 
         let have_input = false;
