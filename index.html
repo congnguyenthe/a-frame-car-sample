@@ -30,14 +30,12 @@
           display: none;
           z-index: 2;
       }
-      body.ar-mode {
+      #overlay.legacy-ar-mode,
+      :xr-overlay {
           user-select: none;
       }
-      body.ar-mode #text,
-      body.ar-mode canvas.a-canvas {
-          display: none;
-      }
-      body.ar-mode #exitbutton {
+      #overlay.legacy-ar-mode #exitbutton,
+      :xr-overlay #exitbutton {
           display: initial;
       }
     </style>
@@ -154,12 +152,14 @@
           this.wasVisible = this.el.getAttribute('visible');
           if (this.el.sceneEl.is('ar-mode')) {
               this.el.setAttribute('visible', false);
-              document.body.classList.add('ar-mode');
+              // Backwards compatibility for Chrome 81's preliminary DOM Overlay API
+              document.getElementById('overlay').classList.add('legacy-ar-mode');
           }
         });
         this.el.sceneEl.addEventListener('exit-vr', (ev) => {
           if (this.wasVisible) this.el.setAttribute('visible', true);
-            document.body.classList.remove('ar-mode');
+          // Backwards compatibility for Chrome 81's preliminary DOM Overlay API
+          document.getElementById('overlay').classList.remove('legacy-ar-mode');
         });
       }
     });
@@ -446,14 +446,17 @@
     </style>
   </head>
   <body>
-    <div id="controls">
-      <div id="controlstick">
+    <div id="overlay">
+      <div id="controls">
+        <div id="controlstick">
+        </div>
+      </div>
+      <div id="exitbutton">
+        Exit AR
       </div>
     </div>
-    <div id="exitbutton">
-      Exit AR
-    </div>
-    <a-scene physics="debug: false">
+    <a-scene physics="debug: false"
+             webxr="optionalFeatures: dom-overlay; overlayElement: #overlay">
       <a-assets>
         <img id="ground" src="images/block.png">
         <img id="bg" src="images/bg.jpg">
@@ -487,8 +490,11 @@
             material="color: #888; shader: flat">
             <a-entity screen-touch></a-entity>
         </a-camera>
+
+        <!--
         <a-entity hand-controls="left" mixin="controller" car-controller-left></a-entity>
         <a-entity hand-controls="right" mixin="controller" car-controller-right></a-entity>
+        -->
         <a-entity screen-controller="deadZone: 0.1" car-controller-two-axis></a-entity>
         <a-entity screen-joystick car-controller-two-axis></a-entity>
         <a-entity xr-two-axis-controller="deadZone: 0.1" car-controller-two-axis></a-entity>
